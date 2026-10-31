@@ -12,18 +12,100 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Download Native Wrapper Project
+      - name: Build Android Project From Scratch
         run: |
-          git clone https://github.com app-src
-          cd app-src
-          rm -rf app/src/main/assets/*
-          cp -r ../web/* app/src/main/assets/
-          sed -i 's|http://localhost:8080|https://netlify.app|g' app/src/main/assets/manifest.json || true
+          mkdir -p app/src/main/assets/www
+          cp -r web/* app/src/main/assets/www/
+          
+          # Create a minimalist build configuration file
+          cat << 'EOF' > build.gradle
+          plugins {
+              id 'com.android.application' version '8.1.1'
+          }
+          android {
+              namespace 'com.smashboxvr.app'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.smashboxvr.app"
+                  minSdk 29
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+          }
+          EOF
+
+          # Create the required base settings configuration
+          echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" > settings.gradle
+          echo "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }" >> settings.gradle
+          echo "rootProject.name = 'SmashboxVR'" >> settings.gradle
+          echo "include ':app'" >> settings.gradle
+
+          # Create standard app folder structure configuration
+          mkdir -p app
+          cat << 'EOF' > app/build.gradle
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.smashboxvr.app'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.smashboxvr.app"
+                  minSdk 29
+                  targetSdk 34
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'androidx.webkit:webkit:1.8.0'
+          }
+          EOF
+
+          # Set up the Android system manifest configuration
+          mkdir -p app/src/main
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://android.com">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application android:label="Smashbox VR" android:theme="@style/Theme.AppCompat.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true" android:theme="@style/Theme.AppCompat.NoActionBar">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # Create the core Java web viewer file
+          mkdir -p app/src/main/java/com/smashboxvr/app
+          cat << 'EOF' > app/src/main/java/com/smashboxvr/app/MainActivity.java
+          package com.smashboxvr.app;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import androidx.appcompat.app.AppCompatActivity;
+
+          public class MainActivity extends AppCompatActivity {
+              @Override
+              protected void Bundle) {
+                  super.onCreate(savedInstanceState);
+                  WebView webView = new WebView(this);
+                  webView.getSettings().setJavaScriptEnabled(true);
+                  webView.getSettings().setDomStorageEnabled(true);
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.loadUrl("https://netlify.app");
+                  setContentView(webView);
+              }
+          }
+          EOF
+
+          # Initialize the standard compilation files
+          gradle wrapper --gradle-version 8.1.1
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
       - name: Upload Finished APK
         uses: actions/upload-artifact@v4
         with:
           name: SmashboxVR-Quest-App
-          path: app-src/app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/debug/*.apk
