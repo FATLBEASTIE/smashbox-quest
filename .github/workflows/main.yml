@@ -6,15 +6,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Web App to APK
-        uses: akexorcist/web-to-apk-action@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          url: 'https://netlify.app'
-          name: 'Smashbox VR'
-          package_name: 'com.smashboxvr.app'
+          node-version: 18
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Create Web App Wrapper Project
+        run: |
+          # Initialize a clean Capacitor project wrapper
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "Smashbox VR" com.smashboxvr.app --web-dir=web
+          npx cap add android
+          
+          # Inject Quest VR configuration headers into the Android Manifest
+          sed -i '/<application/i \    <uses-feature android:name="android.hardware.vr.headset" android:required="true" />' android/app/src/main/AndroidManifest.xml
+          sed -i '/<activity/i \            <meta-data android:name="com.samsung.android.vr.application.mode" android:value="vr_only" />' android/app/src/main/AndroidManifest.xml
+          sed -i '/<category android:name="android.intent.category.LAUNCHER" \/>/a \                <category android:name="com.oculus.intent.category.VR" />' android/app/src/main/AndroidManifest.xml
+          
+          # Synchronize files and compile with the built-in gradle engine
+          npx cap sync
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload Finished APK
         uses: actions/upload-artifact@v4
         with:
           name: SmashboxVR-Quest-App
-          path: ./**/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
