@@ -5,24 +5,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Build Android App Package
+        uses: tttstudios/web-to-apk-action@v1
         with:
-          distribution: 'zulu'
-          java-version: '17'
-      - name: Install Cordova and Generate Project
-        run: |
-          npm install -g cordova
-          cordova create app com.smashboxvr.app "Smashbox VR"
-          cd app
-          rm -rf www/*
-          cp -r ../web/* ./www/
-          echo "android-minSdkVersion=29" >> config.xml
-          echo "android-targetSdkVersion=33" >> config.xml
-          cordova platform add android@12.0.0 --no-telemetry
-          cordova build android --release --no-telemetry
+          url: 'https://netlify.app'
+          app-name: 'Smashbox VR'
+          package-id: 'com.smashboxvr.app'
       - name: Upload Finished APK
         uses: actions/upload-artifact@v4
         with:
           name: SmashboxVR-Quest-App
-          path: app/platforms/android/app/build/outputs/apk/release/*.apk
+          path: ./**/*.apk
