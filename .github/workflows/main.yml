@@ -1,0 +1,20 @@
+name: Build Quest APK
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Build Web APK
+        run: |
+          npm install -g @bubblewrap/cli
+          bubblewrap init --manifest=https://netlify.app
+          bubblewrap build --no-prompt
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: SmashboxVR-Quest-App
+          path: ./*.apk
