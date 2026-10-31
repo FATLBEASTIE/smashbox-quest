@@ -19,18 +19,29 @@ jobs:
 
       - name: Create Web App Wrapper Project
         run: |
-          # Initialize a clean Capacitor project wrapper
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
           npx cap init "Smashbox VR" com.smashboxvr.app --web-dir=web
           npx cap add android
           
-          # Inject Quest VR configuration headers into the Android Manifest
-          sed -i '/<application/i \    <uses-feature android:name="android.hardware.vr.headset" android:required="true" />' android/app/src/main/AndroidManifest.xml
-          sed -i '/<activity/i \            <meta-data android:name="com.samsung.android.vr.application.mode" android:value="vr_only" />' android/app/src/main/AndroidManifest.xml
-          sed -i '/<category android:name="android.intent.category.LAUNCHER" \/>/a \                <category android:name="com.oculus.intent.category.VR" />' android/app/src/main/AndroidManifest.xml
+          # Overwrite the default manifest file with a perfect custom Quest VR template
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://android.com">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-feature android:name="android.hardware.vr.headset" android:required="true" />
+              <application android:label="Smashbox VR" android:theme="@style/AppTheme" android:allowBackup="true" android:icon="@mipmap/ic_launcher">
+                  <meta-data android:name="com.samsung.android.vr.application.mode" android:value="vr_only" />
+                  <activity android:name=".MainActivity" android:exported="true" android:theme="@style/AppTheme.NoActionBar" android:screenOrientation="landscape" android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                          <category android:name="com.oculus.intent.category.VR" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
           
-          # Synchronize files and compile with the built-in gradle engine
           npx cap sync
           cd android
           chmod +x gradlew
