@@ -10,21 +10,20 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-      - name: Create Android Project Wrapper
+      - name: Install Cordova and Generate Project
         run: |
-          # Download a simple, clean Android web-wrapper template
-          git clone https://github.com wrapper
-          # Copy your game web files directly into its assets folder
-          mkdir -p wrapper/app/src/main/assets/
-          cp -r web/* wrapper/app/src/main/assets/
-          # Set the app name
-          sed -i 's/"h5wrapper"/"Smashbox VR"/g' wrapper/app/src/main/res/values/strings.xml
-          # Compile the APK using pure Gradle
-          cd wrapper
-          chmod +x gradlew
-          ./gradlew assembleRelease
+          npm install -g cordova
+          cordova create app com.smashboxvr.app "Smashbox VR"
+          cd app
+          rm -rf www/*
+          cp -r ../web/* ./www/
+          # Force set stable Android requirements
+          echo "android-minSdkVersion=29" >> config.xml
+          echo "android-targetSdkVersion=33" >> config.xml
+          cordova platform add android@12.0.0 --no-telemetry
+          cordova build android --release --no-telemetry
       - name: Upload Finished APK
         uses: actions/upload-artifact@v3
         with:
           name: SmashboxVR-Quest-App
-          path: wrapper/app/build/outputs/apk/release/*.apk
+          path: app/platforms/android/app/build/outputs/apk/release/*.apk
