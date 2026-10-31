@@ -5,16 +5,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
-          node-version: 18
-      - name: Build Web APK
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Install Cordova
+        run: npm install -g cordova
+      - name: Compile Quest App
         run: |
-          npm install -g @bubblewrap/cli
-          bubblewrap init --manifest=https://netlify.app
-          bubblewrap build --no-prompt
-      - name: Upload APK
+          cordova create app com.smashboxvr.app "Smashbox VR"
+          cd app
+          rm -rf www/*
+          cp -r ../web/* ./www/
+          cordova platform add android
+          cordova build android --release
+      - name: Upload Finished APK
         uses: actions/upload-artifact@v3
         with:
           name: SmashboxVR-Quest-App
-          path: ./*.apk
+          path: app/platforms/android/app/build/outputs/apk/release/*.apk
